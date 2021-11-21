@@ -1,4 +1,5 @@
 import datetime
+from decimal import Decimal
 
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
@@ -65,8 +66,13 @@ class Discount(models.Model):
         verbose_name = 'Скидка'
         verbose_name_plural = 'Скидки'
 
+    def value_percent(self):
+        return str(self.value) + '%' # add % simbol
+
     def __str__(self):
         return self.code + ' (' + str(self.value) + '%)'
+
+    value_percent.short_description = 'Размер скидки' # название столбца в таблице
 
 
 class Order(models.Model):
@@ -94,8 +100,27 @@ class Order(models.Model):
         verbose_name = 'Заказ'
         verbose_name_plural = 'Заказы'
 
+    def display_products(self):
+        display = ''
+        # self.orderline_set.all() # получить все объекты модели по данному заказу (модель в нижнем регистре)
+        for order_line in self.orderline_set.all():
+            display += '{0}: {1} шт.; '.format(order_line.product.title, order_line.count)
+        return display
+
+    def display_amount(self):
+        amount = 0
+        for order_line in self.orderline_set.all():
+            amount += order_line.price * order_line.count
+
+        if self.discount:
+            amount = round(amount * Decimal(1 - self.discount.value / 100)) # приведение типа
+        return '{0} руб.'.format(amount)
+
     def __str__(self):
         return  'ID: ' + str(self.id)
+
+    display_products.short_description = 'Состав заказа' # отображение загововка столбца таблицы
+    display_amount.short_description = 'Сумма'
 
 
 class OrderLine(models.Model):
